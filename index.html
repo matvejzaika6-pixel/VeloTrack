@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0d0d0d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VeloTrack">
+  <title>VeloTrack</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --surface2: #1e1e1e;
+      --border: #2a2a2a;
+      --accent: #00e5a0;
+      --accent-dim: rgba(0,229,160,0.12);
+      --accent-glow: rgba(0,229,160,0.3);
+      --text: #f0f0f0;
+      --text-dim: #888;
+      --text-muted: #444;
+      --danger: #ff4d6d;
+      --warning: #ffbb33;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      overscroll-behavior: none;
+      user-select: none;
+    }
+
+    .screen { display: none; flex-direction: column; height: 100vh; }
+    .screen.active { display: flex; }
+
+    /* ─── ONBOARDING ─── */
+    #screen-onboarding {
+      justify-content: flex-start;
+      padding: 0;
+      overflow-y: auto;
+    }
+
+    .onboarding-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 56px 24px 40px;
+      gap: 28px;
+      min-height: 100%;
+    }
+
+    .logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: var(--accent-dim);
+      border: 1.5px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+
+    .logo-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .logo-sub { font-size: 13px; color: var(--text-dim); letter-spacing: 0.5px; }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      align-self: flex-start;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .setup-form {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .form-group input {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 17px;
+      padding: 14px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .form-group input:focus { border-color: var(--accent); }
+    .form-group input::placeholder { color: var(--text-muted); }
+
+    /* ─── AGREE BLOCK ─── */
+    .agree-block {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .agree-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .agree-row.checked { border-color: var(--accent); }
+
+    .agree-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      transition: all 0.15s;
+      font-size: 13px;
+    }
+
+    .agree-row.checked .agree-checkbox {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .agree-text { font-size: 13px; line-height: 1.5; color: var(--text-dim); }
+    .agree-text strong { color: var(--text); }
+
+    .skip-link {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:active { transform: scale(0.96); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      font-size: 16px;
+      padding: 17px 24px;
+      width: 100%;
+      box-shadow: 0 0 24px var(--accent-glow);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.35;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      font-size: 15px;
+      padding: 14px 20px;
+    }
+
+    .btn-danger {
+      background: rgba(255,77,109,0.15);
+      border: 1.5px solid var(--danger);
+      color: var(--danger);
+      font-size: 15px;
+      padding: 14px 20px;
+    }
+
+    .btn-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      font-size: 20px;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    /* ─── TRACK SCREEN ─── */
+    #screen-track { position: relative; }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      background: #111;
+      z-index: 1;
+    }
+
+    .leaflet-tile { filter: brightness(0.55) saturate(0.7) hue-rotate(185deg); }
+
+    .map-overlay-top {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 10;
+      padding: 12px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .map-overlay-top > * { pointer-events: all; }
+
+    .gps-badge {
+      background: rgba(13,13,13,0.85);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid var(--border);
+      border-radius: 24px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-dim);
+    }
+
+    .battery-badge {
+      background: rgba(13,13,13,0.85);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid var(--border);
+      border-radius: 24px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: none;
+    }
+
+    .battery-badge.visible { display: block; }
+
+    .gps-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+    .gps-dot.active { background: var(--accent); animation: pulse 1.5s infinite; }
+    .gps-dot.warning { background: var(--warning); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* stats panel */
+    .stats-panel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 10;
+      background: rgba(13,13,13,0.92);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 16px 16px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-val {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .stat-val.accent { color: var(--accent); }
+    .stat-val.dim { color: var(--text-muted); font-size: 14px; }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .controls-row { display: flex; gap: 10px; }
+    .btn-start-stop { flex: 1; font-size: 16px; padding: 16px; border-radius: var(--radius); }
+
+    /* power mode badge */
+    .power-mode {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      letter-spacing: 0.3px;
+    }
+
+    .power-mode span { color: var(--warning); }
+
+    /* route panel */
+    .route-panel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 20;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      padding: 20px 20px 36px;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .route-panel.open { display: flex; }
+    .route-panel h3 { font-size: 16px; font-weight: 600; }
+
+    .route-input-row { display: flex; gap: 10px; }
+
+    .route-input-row input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      padding: 12px 14px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .route-input-row input:focus { border-color: var(--accent); }
+
+    .offline-notice {
+      background: rgba(255,187,51,0.1);
+      border: 1px solid rgba(255,187,51,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--warning);
+      line-height: 1.5;
+      display: none;
+    }
+
+    .offline-notice.visible { display: block; }
+
+    /* ─── HISTORY SCREEN ─── */
+    #screen-history { flex-direction: column; }
+
+    .top-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .top-bar h2 { font-size: 22px; font-weight: 700; }
+
+    .trips-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .trip-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .trip-card:active { border-color: var(--accent); }
+    .trip-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .trip-date { font-size: 13px; color: var(--text-dim); }
+    .trip-dist { font-size: 22px; font-weight: 700; }
+    .trip-dist span { font-size: 13px; font-weight: 400; color: var(--text-dim); }
+    .trip-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+    .trip-stat { font-size: 13px; color: var(--text-dim); }
+    .trip-stat strong { color: var(--text); font-weight: 600; }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+      padding: 40px;
+      text-align: center;
+    }
+
+    .empty-state .icon { font-size: 48px; opacity: 0.5; }
+    .empty-state p { font-size: 15px; line-height: 1.5; }
+
+    /* bottom nav */
+    .bottom-nav {
+      display: flex;
+      background: rgba(13,13,13,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 10px 0 20px;
+      flex-shrink: 0;
+    }
+
+    .nav-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px;
+      cursor: pointer;
+      transition: color 0.2s;
+      color: var(--text-muted);
+      border: none;
+      background: none;
+      font-family: inherit;
+    }
+
+    .nav-tab.active { color: var(--accent); }
+    .nav-tab .icon { font-size: 22px; }
+    .nav-tab .label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+
+    /* modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      display: none;
+      align-items: flex-end;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      border-top: 1px solid var(--border);
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px 20px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .modal h3 { font-size: 18px; font-weight: 700; }
+
+    #modal-map {
+      height: 220px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .modal-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .modal-stat {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .modal-stat .val { font-size: 22px; font-weight: 700; }
+    .modal-stat .lbl { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* toast */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 1000;
+      opacity: 0;
+      transition: all 0.3s;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    #import-input { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ ONBOARDING SCREEN ═══ -->
+<div id="screen-onboarding" class="screen active">
+  <div class="onboarding-inner">
+    <div class="logo">
+      <div class="logo-icon">🚴</div>
+      <div class="logo-title">VeloTrack</div>
+      <div class="logo-sub">GPS · АНАЛИТИКА · МАРШРУТЫ</div>
+    </div>
+
+    <div class="section-title">Твои данные (для калорий)</div>
+
+    <div class="setup-form">
+      <div class="form-group">
+        <label>Вес (кг)</label>
+        <input type="number" id="input-weight" placeholder="70" min="30" max="200" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>Рост (см)</label>
+        <input type="number" id="input-height" placeholder="175" min="100" max="250" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>Возраст (лет)</label>
+        <input type="number" id="input-age" placeholder="30" min="10" max="100" inputmode="numeric">
+      </div>
+      <div class="skip-link" onclick="skipProfile()">Пропустить — не считать калории</div>
+    </div>
+
+    <div class="section-title">Соглашения</div>
+
+    <div class="agree-block">
+      <div class="agree-row" id="agree-terms-row" onclick="toggleAgree('terms')">
+        <div class="agree-checkbox" id="agree-terms-box"></div>
+        <div class="agree-text">
+          <strong>Условия использования.</strong> Приложение предоставляется «как есть». Данные о калориях — оценочные и не являются медицинской рекомендацией. Я использую приложение на свой страх и риск.
+        </div>
+      </div>
+      <div class="agree-row" id="agree-privacy-row" onclick="toggleAgree('privacy')">
+        <div class="agree-checkbox" id="agree-privacy-box"></div>
+        <div class="agree-text">
+          <strong>Политика конфиденциальности.</strong> Все данные хранятся только на моём устройстве. Геолокация используется только во время записи. Никаких серверов, аналитики и рекламы.
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-form">
+      <button class="btn btn-primary" id="btn-start-onboarding" onclick="saveProfile()" disabled>
+        Начать →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TRACK SCREEN ═══ -->
+<div id="screen-track" class="screen">
+  <div id="map"></div>
+
+  <!-- top overlay -->
+  <div class="map-overlay-top">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div class="gps-badge">
+        <div class="gps-dot" id="gps-dot"></div>
+        <span id="gps-status">GPS...</span>
+      </div>
+      <div class="battery-badge" id="battery-badge">⚡ эконом</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary btn-icon" onclick="toggleRoutePanel()" title="Маршрут">🧭</button>
+      <button class="btn btn-secondary btn-icon" onclick="centerMap()" title="Центровать">📍</button>
+    </div>
+  </div>
+
+  <!-- route panel -->
+  <div class="route-panel" id="route-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>🧭 Маршрут</h3>
+      <button class="btn btn-secondary btn-icon" onclick="toggleRoutePanel()">✕</button>
+    </div>
+    <div class="offline-notice" id="offline-notice">
+      😅 Братан, это сейчас не работает, у тя инета нет.<br>Подключись к сети — и проложим маршрут!
+    </div>
+    <div class="route-input-row">
+      <input type="text" id="route-dest" placeholder="Куда едем? (адрес или место)" onkeydown="if(event.key==='Enter')buildRoute()">
+      <button class="btn btn-primary btn-icon" onclick="buildRoute()">→</button>
+    </div>
+    <button class="btn btn-secondary" onclick="clearRoute()">Очистить маршрут</button>
+  </div>
+
+  <!-- stats panel -->
+  <div class="stats-panel" id="stats-panel">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val accent" id="stat-speed">0.0</div>
+        <div class="stat-label">км/ч</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-dist">0.00</div>
+        <div class="stat-label">км</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-time">00:00</div>
+        <div class="stat-label">время</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-cal">—</div>
+        <div class="stat-label">ккал</div>
+      </div>
+    </div>
+    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-avg">0.0</div>
+        <div class="stat-label">сред. км/ч</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-max">0.0</div>
+        <div class="stat-label">макс. км/ч</div>
+      </div>
+    </div>
+    <div class="controls-row">
+      <button class="btn btn-primary btn-start-stop" id="btn-start" onclick="startTrip()">▶ Старт</button>
+      <button class="btn btn-danger btn-start-stop" id="btn-stop" onclick="stopTrip()" style="display:none;">■ Стоп</button>
+      <button class="btn btn-secondary btn-icon" onclick="gotoHistory()" title="История">🗂</button>
+    </div>
+    <div class="power-mode" id="power-mode-label"></div>
+  </div>
+</div>
+
+<!-- ═══ HISTORY SCREEN ═══ -->
+<div id="screen-history" class="screen">
+  <div class="top-bar">
+    <h2>История</h2>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary btn-icon" onclick="triggerImport()" title="Импорт">📥</button>
+    </div>
+  </div>
+  <div class="trips-list" id="trips-list"></div>
+  <div class="bottom-nav">
+    <button class="nav-tab" onclick="gotoTrack()">
+      <span class="icon">🚴</span>
+      <span class="label">Поездка</span>
+    </button>
+    <button class="nav-tab active">
+      <span class="icon">🗂</span>
+      <span class="label">История</span>
+    </button>
+    <button class="nav-tab" onclick="exportAll()">
+      <span class="icon">📤</span>
+      <span class="label">Экспорт</span>
+    </button>
+  </div>
+</div>
+
+<!-- TRIP DETAIL MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Поездка</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-map"></div>
+    <div class="modal-stats" id="modal-stats"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" style="flex:1" onclick="exportTrip(currentModalTrip)">📤 Экспорт</button>
+      <button class="btn btn-danger btn-icon" onclick="deleteTrip(currentModalTrip)" title="Удалить">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="import-input" accept=".json" onchange="importTrip(event)">
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+let profile = null;         // { weight, height, age } or null (skipped)
+let map = null;
+let userMarker = null;
+let trackPolyline = null;
+let routePolyline = null;
+let modalMap = null;
+let watchId = null;
+let tracking = false;
+let currentTrip = null;
+let timerInterval = null;
+let elapsedSeconds = 0;
+let currentModalTrip = null;
+
+// ── Power / battery optimisation ──
+let powerMode = 'normal';   // 'normal' | 'eco'
+let stopTimeout = null;     // pause GPS when stopped
+let lastMovedAt = Date.now();
+let consecutiveStops = 0;
+let mapThrottleTimer = null;
+let pendingLatLng = null;
+
+// ── Agree state ──
+const agreed = { terms: false, privacy: false };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  profile = loadProfile();
+  const agreedBefore = localStorage.getItem('veloAgreed') === '1';
+  if (profile !== undefined && agreedBefore) {
+    showTrack();
+  } else {
+    showScreen('screen-onboarding');
+    // pre-fill if profile exists
+    if (profile) {
+      document.getElementById('input-weight').value = profile.weight || '';
+      document.getElementById('input-height').value = profile.height || '';
+      document.getElementById('input-age').value = profile.age || '';
+    }
+  }
+  initBatteryMonitor();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ONBOARDING — agree checkboxes
+// ═══════════════════════════════════════════════════════════════════════════════
+function toggleAgree(key) {
+  agreed[key] = !agreed[key];
+  const row = document.getElementById(`agree-${key}-row`);
+  const box = document.getElementById(`agree-${key}-box`);
+  row.classList.toggle('checked', agreed[key]);
+  box.textContent = agreed[key] ? '✓' : '';
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  const btn = document.getElementById('btn-start-onboarding');
+  btn.disabled = !(agreed.terms && agreed.privacy);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════════════════════════════════════════
+function saveProfile() {
+  const w = parseFloat(document.getElementById('input-weight').value);
+  const h = parseFloat(document.getElementById('input-height').value);
+  const a = parseFloat(document.getElementById('input-age').value);
+
+  // Validate only if at least one field is filled
+  const anyFilled = w || h || a;
+  if (anyFilled) {
+    if (!w || !h || !a || w < 30 || h < 100 || a < 5) {
+      showToast('Заполните все поля корректно (или пропустите)');
+      return;
+    }
+    profile = { weight: w, height: h, age: a };
+  } else {
+    profile = null; // no body data
+  }
+
+  localStorage.setItem('veloProfile', profile ? JSON.stringify(profile) : 'null');
+  localStorage.setItem('veloAgreed', '1');
+  showTrack();
+}
+
+function skipProfile() {
+  profile = null;
+  localStorage.setItem('veloProfile', 'null');
+  // still need agreement
+  if (!agreed.terms || !agreed.privacy) {
+    showToast('Сначала прими соглашения ☝️');
+    return;
+  }
+  localStorage.setItem('veloAgreed', '1');
+  showTrack();
+}
+
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem('veloProfile');
+    if (raw === 'null' || raw === null) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showTrack() {
+  showScreen('screen-track');
+  if (!map) initMap();
+  // update kcal stat visibility
+  document.getElementById('stat-cal').textContent = profile ? '0' : '—';
+  requestGPS();
+}
+
+function gotoHistory() {
+  showScreen('screen-history');
+  renderHistory();
+}
+
+function gotoTrack() { showTrack(); }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════════════════════════════════════════════
+function initMap() {
+  map = L.map('map', { zoomControl: false, attributionControl: false })
+    .setView([55.75, 37.62], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  L.control.zoom({ position: 'topright' }).addTo(map);
+
+  trackPolyline = L.polyline([], {
+    color: '#00e5a0', weight: 4, opacity: 0.9, lineJoin: 'round',
+  }).addTo(map);
+}
+
+function updateUserMarker(lat, lon) {
+  if (!userMarker) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:18px;height:18px;background:#00e5a0;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px rgba(0,229,160,0.8);"></div>`,
+      iconSize: [18, 18], iconAnchor: [9, 9],
+    });
+    userMarker = L.marker([lat, lon], { icon }).addTo(map);
+  } else {
+    userMarker.setLatLng([lat, lon]);
+  }
+
+  // Throttle map pan — max once per 3s to save CPU/battery
+  pendingLatLng = [lat, lon];
+  if (!mapThrottleTimer) {
+    mapThrottleTimer = setTimeout(() => {
+      if (pendingLatLng && tracking) {
+        // only pan if user hasn't manually moved map recently
+      }
+      mapThrottleTimer = null;
+      pendingLatLng = null;
+    }, 3000);
+  }
+}
+
+function centerMap() {
+  if (userMarker) map.setView(userMarker.getLatLng(), 16);
+  else showToast('GPS ещё не получен');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BATTERY / POWER OPTIMISATION
+// ═══════════════════════════════════════════════════════════════════════════════
+async function initBatteryMonitor() {
+  if (!navigator.getBattery) return;
+  try {
+    const battery = await navigator.getBattery();
+    checkBattery(battery);
+    battery.addEventListener('levelchange', () => checkBattery(battery));
+    battery.addEventListener('chargingchange', () => checkBattery(battery));
+  } catch(e) {}
+}
+
+function checkBattery(battery) {
+  const low = !battery.charging && battery.level < 0.2;
+  setPowerMode(low ? 'eco' : 'normal');
+  document.getElementById('battery-badge').classList.toggle('visible', low);
+}
+
+function setPowerMode(mode) {
+  powerMode = mode;
+  if (tracking) updateGpsOptions();
+  const label = document.getElementById('power-mode-label');
+  label.innerHTML = mode === 'eco'
+    ? '🔋 <span>Режим экономии заряда</span> — GPS обновляется реже'
+    : '';
+}
+
+function getGpsOptions() {
+  // eco mode: lower accuracy (uses cell/wifi, saves ~40% battery)
+  // normal: high accuracy GPS
+  if (powerMode === 'eco') {
+    return { enableHighAccuracy: false, timeout: 20000, maximumAge: 8000 };
+  }
+  return { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 };
+}
+
+function updateGpsOptions() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, getGpsOptions());
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GPS
+// ═══════════════════════════════════════════════════════════════════════════════
+function requestGPS() {
+  if (!navigator.geolocation) { setGpsStatus('Нет GPS', 'warning'); return; }
+  setGpsStatus('Поиск...', false);
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, getGpsOptions());
+}
+
+function onPosition(pos) {
+  const { latitude: lat, longitude: lon, speed: rawSpeed, accuracy } = pos.coords;
+  const ts = pos.timestamp;
+
+  setGpsStatus(accuracy < 20 ? 'GPS точный' : `GPS ±${Math.round(accuracy)}м`, 'active');
+  updateUserMarker(lat, lon);
+
+  if (!tracking) return;
+
+  // ── Adaptive stop detection ──
+  const speedKmh = rawSpeed != null ? rawSpeed * 3.6 : -1;
+  const isStopped = speedKmh >= 0 && speedKmh < 1.5;
+
+  if (isStopped) {
+    consecutiveStops++;
+    // After 10 consecutive stopped readings (~20-30s), throttle GPS heavily
+    if (consecutiveStops === 10) {
+      setGpsStatus('Пауза (стоп)', 'warning');
+      navigator.geolocation.clearWatch(watchId);
+      // Re-check every 15s
+      stopTimeout = setTimeout(() => {
+        if (tracking) {
+          watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, getGpsOptions());
+          setGpsStatus('Возобновляем...', false);
+        }
+      }, 15000);
+    }
+    if (consecutiveStops >= 10) return; // don't record stop points
+  } else {
+    consecutiveStops = 0;
+    lastMovedAt = Date.now();
+    if (stopTimeout) { clearTimeout(stopTimeout); stopTimeout = null; }
+  }
+
+  // ── Distance filter: skip if < 5m (eco) or < 3m (normal) ──
+  const minDist = powerMode === 'eco' ? 0.005 : 0.003;
+  const point = { lat, lon, t: ts };
+
+  if (currentTrip.route.length > 0) {
+    const prev = currentTrip.route[currentTrip.route.length - 1];
+    const d = haversine(prev.lat, prev.lon, lat, lon);
+    if (d < minDist) return;
+  }
+
+  currentTrip.route.push(point);
+  trackPolyline.addLatLng([lat, lon]);
+  recalcTrip();
+  updateStatsUI();
+}
+
+function onGpsError(err) {
+  const msgs = { 1: 'Нет доступа к GPS', 2: 'GPS недоступен', 3: 'GPS таймаут' };
+  setGpsStatus(msgs[err.code] || 'Ошибка GPS', 'warning');
+}
+
+function setGpsStatus(text, state) {
+  document.getElementById('gps-status').textContent = text;
+  const dot = document.getElementById('gps-dot');
+  dot.className = 'gps-dot' + (state ? ' ' + state : '');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TRIP RECORDING
+// ═══════════════════════════════════════════════════════════════════════════════
+function startTrip() {
+  currentTrip = {
+    id: 'trip_' + Date.now(),
+    date: new Date().toISOString(),
+    route: [],
+    distance_km: 0,
+    duration_sec: 0,
+    speed_avg_kmh: 0,
+    speed_max_kmh: 0,
+    calories_burned_kcal: null,
+  };
+
+  tracking = true;
+  elapsedSeconds = 0;
+  consecutiveStops = 0;
+  trackPolyline.setLatLngs([]);
+
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('btn-stop').style.display = '';
+
+  // Update GPS options for new trip
+  updateGpsOptions();
+
+  timerInterval = setInterval(() => {
+    elapsedSeconds++;
+    currentTrip.duration_sec = elapsedSeconds;
+    document.getElementById('stat-time').textContent = formatTime(elapsedSeconds);
+    // Recalc calories every 5s only (not every second — saves CPU)
+    if (elapsedSeconds % 5 === 0) {
+      recalcCalories();
+      updateStatsUI();
+    }
+  }, 1000);
+
+  showToast('🚴 Поездка начата');
+}
+
+function stopTrip() {
+  if (!currentTrip || currentTrip.route.length < 2) {
+    showToast('Слишком короткая поездка');
+    tracking = false;
+    document.getElementById('btn-start').style.display = '';
+    document.getElementById('btn-stop').style.display = 'none';
+    clearInterval(timerInterval);
+    return;
+  }
+
+  tracking = false;
+  clearInterval(timerInterval);
+  if (stopTimeout) { clearTimeout(stopTimeout); stopTimeout = null; }
+
+  recalcTrip();
+  saveTrip(currentTrip);
+
+  document.getElementById('btn-start').style.display = '';
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('power-mode-label').innerHTML = '';
+
+  const calStr = currentTrip.calories_burned_kcal != null
+    ? `, ${currentTrip.calories_burned_kcal} ккал`
+    : '';
+  showToast(`✅ Сохранено: ${currentTrip.distance_km.toFixed(2)} км${calStr}`);
+
+  // go back to normal GPS watch
+  updateGpsOptions();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALCULATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+function recalcTrip() {
+  if (!currentTrip || currentTrip.route.length < 2) return;
+
+  const route = currentTrip.route;
+  let dist = 0, maxSpeed = 0, speedSum = 0, speedCount = 0;
+
+  for (let i = 1; i < route.length; i++) {
+    const d = haversine(route[i-1].lat, route[i-1].lon, route[i].lat, route[i].lon);
+    dist += d;
+    const dt = (route[i].t - route[i-1].t) / 3600000;
+    if (dt > 0 && dt < 0.1) {
+      const spd = d / dt;
+      if (spd < 80) {
+        speedSum += spd;
+        speedCount++;
+        if (spd > maxSpeed) maxSpeed = spd;
+      }
+    }
+  }
+
+  currentTrip.distance_km = dist;
+  currentTrip.speed_avg_kmh = speedCount > 0 ? speedSum / speedCount : 0;
+  currentTrip.speed_max_kmh = maxSpeed;
+  recalcCalories();
+}
+
+function recalcCalories() {
+  if (!currentTrip || !profile) {
+    // No profile = no calories
+    if (currentTrip) currentTrip.calories_burned_kcal = null;
+    return;
+  }
+  const avgSpeed = currentTrip.speed_avg_kmh;
+  const durationHours = elapsedSeconds / 3600;
+  // MET values for cycling (ACSM standard)
+  // < 15 km/h → MET 5.8  |  15-20 → 8.0  |  20-25 → 10.0  |  > 25 → 12.0
+  const met = avgSpeed < 15 ? 5.8 : avgSpeed < 20 ? 8.0 : avgSpeed < 25 ? 10.0 : 12.0;
+  currentTrip.calories_burned_kcal = Math.round(met * profile.weight * durationHours);
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATS UI
+// ═══════════════════════════════════════════════════════════════════════════════
+function updateStatsUI() {
+  if (!currentTrip) return;
+
+  const route = currentTrip.route;
+  let curSpeed = 0;
+  if (route.length >= 2) {
+    const a = route[route.length - 2];
+    const b = route[route.length - 1];
+    const d = haversine(a.lat, a.lon, b.lat, b.lon);
+    const dt = (b.t - a.t) / 3600000;
+    if (dt > 0 && dt < 0.05) curSpeed = Math.min(d / dt, 80);
+  }
+
+  document.getElementById('stat-speed').textContent = curSpeed.toFixed(1);
+  document.getElementById('stat-dist').textContent = currentTrip.distance_km.toFixed(2);
+  document.getElementById('stat-avg').textContent = currentTrip.speed_avg_kmh.toFixed(1);
+  document.getElementById('stat-max').textContent = currentTrip.speed_max_kmh.toFixed(1);
+
+  const calEl = document.getElementById('stat-cal');
+  if (currentTrip.calories_burned_kcal != null) {
+    calEl.textContent = currentTrip.calories_burned_kcal;
+    calEl.classList.remove('dim');
+  } else {
+    calEl.textContent = '—';
+    calEl.classList.add('dim');
+  }
+}
+
+function formatTime(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+function saveTrip(trip) {
+  const trips = loadTrips();
+  trips.unshift(trip);
+  localStorage.setItem('veloTrips', JSON.stringify(trips));
+}
+
+function loadTrips() {
+  try { return JSON.parse(localStorage.getItem('veloTrips')) || []; } catch { return []; }
+}
+
+function deleteTrip(trip) {
+  if (!confirm('Удалить поездку?')) return;
+  let trips = loadTrips().filter(t => t.id !== trip.id);
+  localStorage.setItem('veloTrips', JSON.stringify(trips));
+  closeModal();
+  renderHistory();
+  showToast('Поездка удалена');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderHistory() {
+  const trips = loadTrips();
+  const list = document.getElementById('trips-list');
+  list.innerHTML = '';
+
+  if (trips.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">🚴</div><p>Поездок пока нет.<br>Выйди на маршрут!</p></div>`;
+    return;
+  }
+
+  trips.forEach(trip => {
+    const date = new Date(trip.date);
+    const dateStr = date.toLocaleDateString('ru-RU', { day:'numeric', month:'long' }) + ' · ' +
+                    date.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+    const calStr = trip.calories_burned_kcal != null ? trip.calories_burned_kcal : '—';
+    const card = document.createElement('div');
+    card.className = 'trip-card';
+    card.innerHTML = `
+      <div class="trip-card-top">
+        <div>
+          <div class="trip-date">${dateStr}</div>
+          <div class="trip-dist">${trip.distance_km.toFixed(2)} <span>км</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px;font-weight:700;color:var(--accent)">${calStr}</div>
+          <div style="font-size:11px;color:var(--text-dim)">ккал</div>
+        </div>
+      </div>
+      <div class="trip-stats">
+        <div class="trip-stat">⏱ <strong>${formatTime(trip.duration_sec)}</strong></div>
+        <div class="trip-stat">⚡ <strong>${trip.speed_avg_kmh.toFixed(1)} км/ч</strong></div>
+        <div class="trip-stat">🏆 <strong>${trip.speed_max_kmh.toFixed(1)} км/ч</strong></div>
+      </div>
+    `;
+    card.onclick = () => openTripModal(trip);
+    list.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function openTripModal(trip) {
+  currentModalTrip = trip;
+  const date = new Date(trip.date);
+  document.getElementById('modal-title').textContent =
+    date.toLocaleDateString('ru-RU', { day:'numeric', month:'short' }) + ' — ' +
+    date.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+
+  const calVal = trip.calories_burned_kcal != null ? trip.calories_burned_kcal : '—';
+  document.getElementById('modal-stats').innerHTML = `
+    <div class="modal-stat"><div class="val">${trip.distance_km.toFixed(2)}</div><div class="lbl">км</div></div>
+    <div class="modal-stat"><div class="val">${formatTime(trip.duration_sec)}</div><div class="lbl">Время</div></div>
+    <div class="modal-stat"><div class="val" style="color:var(--accent)">${trip.speed_avg_kmh.toFixed(1)}</div><div class="lbl">Сред. км/ч</div></div>
+    <div class="modal-stat"><div class="val">${trip.speed_max_kmh.toFixed(1)}</div><div class="lbl">Макс. км/ч</div></div>
+    <div class="modal-stat"><div class="val" style="color:var(--warning)">${calVal}</div><div class="lbl">Калории</div></div>
+    <div class="modal-stat"><div class="val">${trip.route.length}</div><div class="lbl">Точек GPS</div></div>
+  `;
+
+  document.getElementById('modal-overlay').classList.add('open');
+
+  setTimeout(() => {
+    const mapEl = document.getElementById('modal-map');
+    mapEl.innerHTML = '';
+    if (modalMap) { modalMap.remove(); modalMap = null; }
+
+    if (trip.route.length < 2) {
+      mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:14px;">Нет маршрута</div>';
+      return;
+    }
+
+    const coords = trip.route.map(p => [p.lat, p.lon]);
+    modalMap = L.map('modal-map', { zoomControl: false, attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(modalMap);
+    const poly = L.polyline(coords, { color: '#00e5a0', weight: 3 }).addTo(modalMap);
+    modalMap.fitBounds(poly.getBounds(), { padding: [20, 20] });
+    L.circleMarker(coords[0], { radius: 6, fillColor: '#00e5a0', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(modalMap);
+    L.circleMarker(coords[coords.length-1], { radius: 6, fillColor: '#ff4d6d', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(modalMap);
+  }, 100);
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════════════════════════
+function exportTrip(trip) {
+  if (!trip) return;
+  const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `velo_${trip.id}.json`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Поездка экспортирована');
+}
+
+function exportAll() {
+  const trips = loadTrips();
+  if (!trips.length) { showToast('Нет поездок для экспорта'); return; }
+  const blob = new Blob([JSON.stringify({ velotrack_export: true, trips }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `velotrack_all_${Date.now()}.json`; a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Экспортировано ${trips.length} поездок`);
+}
+
+function triggerImport() { document.getElementById('import-input').click(); }
+
+function importTrip(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      let imported = 0;
+      const add = (trip) => {
+        if (!trip.id || !trip.date || !Array.isArray(trip.route)) throw new Error('Неверный формат');
+        trip.id = 'imported_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        saveTrip(trip); imported++;
+      };
+      if (data.velotrack_export && Array.isArray(data.trips)) data.trips.forEach(add);
+      else add(data);
+      renderHistory();
+      showToast(`Импортировано: ${imported} поездок`);
+    } catch (err) { showToast('Ошибка импорта: ' + err.message); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROUTING
+// ═══════════════════════════════════════════════════════════════════════════════
+function toggleRoutePanel() {
+  const panel = document.getElementById('route-panel');
+  const opening = !panel.classList.contains('open');
+  panel.classList.toggle('open', opening);
+
+  if (opening) {
+    // Check internet
+    const offlineEl = document.getElementById('offline-notice');
+    const isOnline = navigator.onLine;
+    offlineEl.classList.toggle('visible', !isOnline);
+    document.getElementById('route-dest').disabled = !isOnline;
+    document.querySelector('.route-input-row .btn-primary').disabled = !isOnline;
+  }
+}
+
+async function buildRoute() {
+  if (!navigator.onLine) {
+    showToast('😅 Интернета нет — маршрут недоступен');
+    return;
+  }
+
+  const dest = document.getElementById('route-dest').value.trim();
+  if (!dest) { showToast('Введите адрес назначения'); return; }
+  if (!userMarker) { showToast('Ожидаем GPS...'); return; }
+
+  showToast('Строим маршрут...');
+
+  try {
+    const geoRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(dest)}&format=json&limit=1`,
+      { headers: { 'Accept-Language': 'ru' } }
+    );
+    const geoData = await geoRes.json();
+    if (!geoData.length) { showToast('Место не найдено'); return; }
+
+    const toLat = parseFloat(geoData[0].lat);
+    const toLon = parseFloat(geoData[0].lon);
+    const from = userMarker.getLatLng();
+
+    const osrmRes = await fetch(
+      `https://router.project-osrm.org/route/v1/bike/${from.lng},${from.lat};${toLon},${toLat}?overview=full&geometries=geojson`
+    );
+    const osrmData = await osrmRes.json();
+
+    if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+
+    if (osrmData.code === 'Ok') {
+      const coords = osrmData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+      routePolyline = L.polyline(coords, {
+        color: '#ffbb33', weight: 4, opacity: 0.85, dashArray: '8, 6',
+      }).addTo(map);
+      map.fitBounds(routePolyline.getBounds(), { padding: [60, 60] });
+      const dist = (osrmData.routes[0].distance / 1000).toFixed(1);
+      const mins = Math.round(osrmData.routes[0].duration / 60);
+      showToast(`🗺 ${dist} км · ~${mins} мин`);
+      toggleRoutePanel();
+    } else {
+      showToast('OSRM не нашёл маршрут');
+    }
+  } catch (err) {
+    showToast('Ошибка: ' + err.message);
+  }
+}
+
+function clearRoute() {
+  if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+  document.getElementById('route-panel').classList.remove('open');
+  showToast('Маршрут очищен');
+}
+
+// Listen for online/offline changes
+window.addEventListener('online', () => {
+  const panel = document.getElementById('route-panel');
+  if (panel.classList.contains('open')) {
+    document.getElementById('offline-notice').classList.remove('visible');
+    document.getElementById('route-dest').disabled = false;
+    document.querySelector('.route-input-row .btn-primary').disabled = false;
+  }
+});
+
+window.addEventListener('offline', () => {
+  const panel = document.getElementById('route-panel');
+  if (panel.classList.contains('open')) {
+    document.getElementById('offline-notice').classList.add('visible');
+    document.getElementById('route-dest').disabled = true;
+    document.querySelector('.route-input-row .btn-primary').disabled = true;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+
+<script>
+// Service Worker (кэширует Leaflet для офлайн-работы)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const swCode = `
+const CACHE = 'velo-v2';
+const ASSETS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
+});
+self.addEventListener('fetch', e => {
+  // Cache tiles for offline map viewing
+  if (e.request.url.includes('tile.openstreetmap.org')) {
+    e.respondWith(
+      caches.open(CACHE).then(c =>
+        c.match(e.request).then(r => r || fetch(e.request).then(res => {
+          c.put(e.request, res.clone());
+          return res;
+        }).catch(() => new Response('', { status: 503 })))
+      )
+    );
+    return;
+  }
+  e.respondWith(
+    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+      caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+      return res;
+    }))
+  );
+});
+    `;
+    try {
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    } catch(e) {}
+  });
+}
+</script>
+</body>
+</html>
